@@ -15,7 +15,8 @@ import functools
 
 load_dotenv()  # Load environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY)
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+client = OpenAI()
 
 def encode_image(image_path: str) -> str:
     with open(image_path, "rb") as image_file:
@@ -23,9 +24,8 @@ def encode_image(image_path: str) -> str:
 
 def query_openai(messages: list[dict]) -> str:
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # Updated model name
+        model="gpt-4o", 
         messages=messages,
-        max_tokens=300,
     )
     usage = response.usage
     if response.choices[0].message.content:
@@ -42,7 +42,7 @@ def main(image_path):
             "content": [
                 {
                     "type": "text",
-                    "text": "Resuelve el siguiente problema. Da una explicación paso por paso. No uses latext"
+                    "text": "Resuelve el siguiente problema. Da una explicación paso por paso, siendo breve y directo. No uses latext, ni negrita."
                 },
                 {
                     "type": "image_url",
