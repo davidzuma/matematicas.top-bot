@@ -3,6 +3,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 import functools
+from utils import get_embedding, retrieve_similar_vectors, get_url_and_description
 
 # gpt-4o-mini
 # $0.150 / 1M input tokens
@@ -24,7 +25,7 @@ def encode_image(image_path: str) -> str:
 
 def query_openai(messages: list[dict]) -> str:
     response = client.chat.completions.create(
-        model="gpt-4o", 
+        model="gpt-4o-mini", 
         messages=messages,
     )
     usage = response.usage
@@ -33,7 +34,7 @@ def query_openai(messages: list[dict]) -> str:
     return ""
 
 @functools.lru_cache(maxsize=None) 
-def main(image_path):
+def parse_image(image_path):
     base64_image = encode_image(image_path)
 
     messages = [
@@ -42,7 +43,11 @@ def main(image_path):
             "content": [
                 {
                     "type": "text",
-                    "text": "Resuelve el siguiente problema. Da una explicación paso por paso, siendo breve y directo. No uses latext, ni negrita."
+                    "text": "Eres un experto en clasificar problemás matemáticos."
+                    "Dada una imagen devuelve el contenido de la imagen y el tipo de problema matemático."
+                    "Ejemplo de resultado: ∫ x^(-1/3) dx - Integral inmediata"
+                    "Devuelve esta estructura de resultado (equación/problema - tipo de equación/problema) y nada más."
+        
                 },
                 {
                     "type": "image_url",
@@ -56,7 +61,35 @@ def main(image_path):
 
     final_response = query_openai(messages)
     return final_response
+def solve_math_problem(math_problem: str):
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Eres un experto en explicar problemas matemáticos. "
+                             f"Dada la siguiente expresión matemática, resuélvela: {math_problem}. "
+                             "Devuelve solo el proceso para hayar la solución y la"
+                }
+            ]
+        }
+    ]
+
+    final_response = query_openai(messages)
+    return final_response
+def recommend_yt_video(math_problem:str):
+    math_problem_embedding = get_embedding(math_problem)
+    similar_vectors_in_yt_videos = retrieve_similar_vectors(math_problem_embedding, limit = 5)
+    description_link: dict = dict(get_url_and_description(id) for id , _ in similar_vectors_in_yt_videos)
+    return description_link
+    
+
+
 
 if __name__ == "__main__":
-    image_path = "image.png"  # Replace with the actual image path
-    main(image_path)
+    image_path = "data/imgs/eq_example.png"
+    math_problem =parse_image(image_path)  # Replace with the actual image path
+    solution = solve_math_problem(image_path)
+    yt_video_links = recommend_yt_video(math_problem)
+    print(math_problem," ----" ,yt_video_links)
