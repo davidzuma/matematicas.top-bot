@@ -70,7 +70,7 @@ def solve_math_problem(math_problem: str):
                     "type": "text",
                     "text": "Eres un experto en explicar problemas matemáticos. "
                              f"Dada la siguiente expresión matemática, resuélvela: {math_problem}. "
-                             "Devuelve solo el proceso para hayar la solución y la"
+                             "Devuelve solo el proceso para hayar la solución y la solución. No incluyas latex solo texto plano y símbolos matemáticos."
                 }
             ]
         }
@@ -80,9 +80,33 @@ def solve_math_problem(math_problem: str):
     return final_response
 def recommend_yt_video(math_problem:str):
     math_problem_embedding = get_embedding(math_problem)
-    similar_vectors_in_yt_videos = retrieve_similar_vectors(math_problem_embedding, limit = 5)
-    description_link: dict = dict(get_url_and_description(id) for id , _ in similar_vectors_in_yt_videos)
-    return description_link
+    similar_vectors_in_yt_videos = retrieve_similar_vectors(math_problem_embedding, limit=5)
+    descriptions_and_links = "/n".join([":".join(get_url_and_description(id)) for id, _ in similar_vectors_in_yt_videos])
+  
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"""Eres un experto en encontrar videos educativos. 
+                             Dada la siguiente problema de matemáticas y la lista de videos, sugiere el video más relevante:
+                             
+                             Problema de mátematicas: {math_problem}. 
+                             
+                             Lista de videos y links: {descriptions_and_links}.
+
+                             Devuelve el link del video. No incluyas nada más."""
+                }
+            ]
+        }
+    ]
+
+    final_response = query_openai(messages)
+
+
+    return final_response
     
 
 
@@ -91,5 +115,5 @@ if __name__ == "__main__":
     image_path = "data/imgs/eq_example.png"
     math_problem =parse_image(image_path)  # Replace with the actual image path
     solution = solve_math_problem(image_path)
-    yt_video_links = recommend_yt_video(math_problem)
-    print(math_problem," ----" ,yt_video_links)
+    yt_video_link = recommend_yt_video(math_problem)
+    print(math_problem," ----" ,yt_video_link)

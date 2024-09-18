@@ -3,7 +3,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 import os
 import logging
 from dotenv import load_dotenv
-from img_gpt import main as solve_math_equation
+from img_gpt import parse_image, recommend_yt_video, solve_math_problem
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,11 +30,15 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Image downloaded to {image_path}.")
     
     # Resolver la ecuación usando la función importada
-    result = solve_math_equation(image_path)
+    math_problem =parse_image(image_path)  # Replace with the actual image path
+    solution = solve_math_problem(math_problem)
+    
     logger.info("Equation solved.")
 
     # Enviar el resultado
-    await update.message.reply_text(result)
+    await update.message.reply_text(solution)
+    yt_video_link = recommend_yt_video(math_problem)
+    await update.message.reply_text(yt_video_link)
     
     # Eliminar la imagen temporal
     os.remove(image_path)
