@@ -1,6 +1,13 @@
-# matematicas.top-bot
+# Matematicas.top-bot
 
-![Matematicas Top Logo](static/matematicas-top_logo.jpeg)
+
+<div style="display: flex; justify-content: center; align-items: center;">
+    <img src="static/matematicas-top_logo.jpeg" alt="Matematicas Top Logo" width="200" style="margin-right: 20px;"/>
+    <a href="https://t.me/matematicastop_bot" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram Logo" width="50"/>
+    </a>
+</div>
+
 
 Bienvenido al **matematicas.top-bot**, tu asistente personal de matemáticas en Telegram. Este bot está diseñado para ayudarte a resolver ecuaciones matemáticas simplemente enviando una imagen de la ecuación con la que necesitas ayuda.
 
