@@ -44,16 +44,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Add user message to history
     context.user_data['history'].append({"role": "user", "content": message})
 
-    # Get response from OpenAI
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
+
     response = math_assistant.chat(context.user_data['history'], user.id)
 
-    # Add assistant's response to history
     context.user_data['history'].append({"role": "assistant", "content": response})
 
-    # Trim history if it gets too long
     if len(context.user_data['history']) > 10:
         context.user_data['history'] = context.user_data['history'][-10:]
 
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
     await update.message.reply_text(response)
 
 async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -13,7 +13,8 @@ class MathAssistant:
         system_message = {
             "role": "system",
             "content": """Eres un asistente matemático amigable y conversacional. 
-            Puedes ayudar con problemas matemáticos, explicar conceptos y mantener una conversación general sobre matemáticas y temas relacionados. No uses LaTeX ni Markdown solo texto plano."""
+            Puedes ayudar con problemas matemáticos, explicar conceptos y mantener una conversación general sobre matemáticas y temas relacionados.
+            No uses LaTeX ni Markdown solo texto plano."""
         }
         
         full_messages = [system_message] + messages
