@@ -17,6 +17,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 client = OpenAI()
 
+# TODO: This maybe belongs outside src or in databaseManage with an UPSERT
 def get_videos():
     command = [
         "yt-dlp",
@@ -30,19 +31,7 @@ def get_videos():
         subprocess.run(command, stdout=output_file)
 
 
-def get_playlists():
-    command = [
-        "yt-dlp",
-        "--flat-playlist",
-        "--print", "%(url)s,%(title)s",
-        "--ignore-errors",
-        "--no-warnings",
-        "https://www.youtube.com/@matematicastop/videos"
-    ]
-    with open("videos.csv", "w") as output_file:
-        subprocess.run(command, stdout=output_file)
-
-
+# TODO: create a class to be used in databaseManager and mathAssistant OpenAIUtils with raw funcionalities openAI
 def get_embedding(text):
     response = client.embeddings.create(
         input=text,

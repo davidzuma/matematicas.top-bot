@@ -8,7 +8,7 @@ from utils import get_embedding
 import pandas as pd
 
 
-
+ # TODO: add config here
 # Load environment variables from .env file
 load_dotenv()
 SQLITECLOUD_API_KEY = os.getenv("SQLITECLOUD_API_KEY")
