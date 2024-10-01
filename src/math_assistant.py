@@ -8,6 +8,17 @@ class MathAssistant:
     def __init__(self,db_manager,openai_client):
         self.db_manager = db_manager
         self.openai_client = openai_client
+        
+    def chat(self, messages: list[dict], user_id: int) -> str:
+        system_message = {
+            "role": "system",
+            "content": """Eres un asistente matemático amigable y conversacional. 
+            Puedes ayudar con problemas matemáticos, explicar conceptos y mantener una conversación general sobre matemáticas y temas relacionados. No uses LaTeX ni Markdown solo texto plano."""
+        }
+        
+        full_messages = [system_message] + messages
+        
+        return self.query_openai(full_messages, "gpt-4o-mini", user_id)
 
     @staticmethod
     def encode_image(image_path: str) -> str:
@@ -17,13 +28,6 @@ class MathAssistant:
     @staticmethod
     def hashable_messages(messages):
         return tuple(json.dumps(message, sort_keys=True) for message in messages)
-
-    def get_embedding(self, text):
-        response = self.openai_client.embeddings.create(
-            input=text,
-            model="text-embedding-3-large"
-        )
-        return response.data[0].embedding
 
     @functools.lru_cache(maxsize=None)
     def _cached_query_openai(self, hashed_messages: tuple, model: str, user_id: int) -> str:
@@ -99,6 +103,12 @@ class MathAssistant:
         ]
         
         return self.query_openai(messages, "gpt-4o", user_id)
+    def get_embedding(self, text):
+        response = self.openai_client.embeddings.create(
+            input=text,
+            model="text-embedding-3-large"
+        )
+        return response.data[0].embedding
 
     def recommend_yt_video(self, math_problem: str, user_id: int):
         math_problem_embedding = self.get_embedding(math_problem)

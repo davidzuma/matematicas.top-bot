@@ -5,7 +5,6 @@ import logging
 from dotenv import load_dotenv
 from math_assistant import MathAssistant
 from database import DatabaseManager
-import asyncio
 from openai import OpenAI
 
 # Configure logging
@@ -20,61 +19,78 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_API_KEY")
 SQLITECLOUD_API_KEY = os.getenv("SQLITECLOUD_API_KEY")
 DB_NAME = os.getenv("DB_NAME", "matematicas-top")
 
-# Función para responder al comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db_manager = context.bot_data['db_manager']
     user = update.effective_user
 
-    # Revisar si hay un código de referencia
     if context.args:
-        referrer_id = context.args[0]  # Código de referencia
-        db_manager.add_credits(referrer_id, 10)  # Dar créditos al usuario que refirió
+        referrer_id = context.args[0]
+        db_manager.add_credits(referrer_id, 10)
         await update.message.reply_text(f"Te has registrado con el código de referencia de {referrer_id}. ¡Ellos ganaron 10 créditos!")
 
     db_manager.create_user(user.id, user.username, user.first_name, user.last_name)
     logger.info(f"User {user.first_name} started the bot.")
-    await update.message.reply_text(f'Hola {user.first_name}! Envíame una imagen de una ecuación y la resolveré para ti.')
+    await update.message.reply_text(f'Hola {user.first_name}! Puedes enviarme mensajes o imágenes de ecuaciones. ¿En qué puedo ayudarte hoy?')
 
-# Función para manejar imágenes recibidas
+    # Initialize conversation history
+    context.user_data['history'] = []
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    math_assistant = context.bot_data['math_assistant']
+    user = update.effective_user
+    message = update.message.text
+
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
+    # Add user message to history
+    context.user_data['history'].append({"role": "user", "content": message})
+
+    # Get response from OpenAI
+    response = math_assistant.chat(context.user_data['history'], user.id)
+
+    # Add assistant's response to history
+    context.user_data['history'].append({"role": "assistant", "content": response})
+
+    # Trim history if it gets too long
+    if len(context.user_data['history']) > 10:
+        context.user_data['history'] = context.user_data['history'][-10:]
+
+    await update.message.reply_text(response)
+
 async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     math_assistant = context.bot_data['math_assistant']
     logger.info("Received an image from the user.")
     user = update.effective_user
 
-    # Mostrar "escribiendo..." mientras el bot procesa la imagen
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
     
-    # Obtener la imagen
     file = await context.bot.get_file(update.message.photo[-1].file_id)
     
-    # Descargar la imagen
     image_path = 'temp_equation.jpg'
     await file.download_to_drive(image_path)
     logger.info(f"Image downloaded to {image_path}.")
     
-    # Resolver la ecuación usando la función importada
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')  # Seguir mostrando escribiendo
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
     math_problem = math_assistant.parse_image(image_path, user.id)
     
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')  # Seguir mostrando escribiendo
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
     solution = math_assistant.solve_math_problem(math_problem, user.id)
     
     logger.info("Equation solved.")
     
-    # Enviar el resultado
     await update.message.reply_text(solution)
     
-    # Mostrar "escribiendo..." mientras busca el video de YouTube
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
     
     yt_video_link = math_assistant.recommend_yt_video(math_problem, user.id)
     await update.message.reply_text(yt_video_link)
     
-    # Eliminar la imagen temporal
     os.remove(image_path)
     logger.info(f"Temporary image {image_path} deleted.")
 
-# Función para mostrar el uso de OpenAI
+    # Add this interaction to the conversation history
+    context.user_data['history'].append({"role": "user", "content": "User sent an image of a math problem."})
+    context.user_data['history'].append({"role": "assistant", "content": f"I solved the math problem: {solution}\n\nHere's a relevant video: {yt_video_link}"})
+
 async def show_usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db_manager = context.bot_data['db_manager']
     user = update.effective_user
@@ -85,32 +101,27 @@ async def show_usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Aún no has utilizado el servicio de OpenAI.")
 
-# Función para generar el enlace de referencia
 async def referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     referral_link = f"https://t.me/{context.bot.username}?start={user.id}"
     await update.message.reply_text(f'Tu enlace de referencia: {referral_link}')
 
-# Función principal para configurar el bot
 def main():
     db_manager = DatabaseManager(SQLITECLOUD_API_KEY, DB_NAME)
     db_manager.initialize_database()
     math_assistant = MathAssistant(db_manager, openai_client)
 
-    # Inicializar el bot de Telegram
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     
-    # Guardar objetos en el contexto del bot
     application.bot_data['db_manager'] = db_manager
     application.bot_data['math_assistant'] = math_assistant
 
-    # Agregar manejadores
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("usage", show_usage))
-    application.add_handler(CommandHandler("referral", referral))  # Comando para generar el enlace de referencia
+    application.add_handler(CommandHandler("referral", referral))
     application.add_handler(MessageHandler(filters.PHOTO, handle_image))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Ejecutar el bot hasta que se detenga manualmente
     logger.info("Bot is polling for updates.")
     application.run_polling()
 
