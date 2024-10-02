@@ -1,20 +1,10 @@
 import subprocess
-import contextlib
-import os
-import random
-
 import pandas as pd
-import sqlitecloud
-from dotenv import load_dotenv
-
-import base64
-import os
 from openai import OpenAI
-# Load environment variables from .env file
-load_dotenv()
-SQLITECLOUD_API_KEY = os.getenv("SQLITECLOUD_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+from config import Config
+
+config = Config()
+config.set_config()
 client = OpenAI()
 
 # TODO: This maybe belongs outside src or in databaseManage with an UPSERT
