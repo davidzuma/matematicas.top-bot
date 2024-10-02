@@ -12,8 +12,8 @@ class MathAssistant:
     def chat(self, messages: list[dict], user_id: int) -> str:
         system_message = {
             "role": "system",
-            "content": """Eres un asistente matemático amigable y conversacional. 
-            Puedes ayudar con problemas matemáticos, explicar conceptos y mantener una conversación general sobre matemáticas y temas relacionados.
+            "content": """Eres Matemáticas TOP un asistente matemático amigable y conversacional. Cuando te presentes introduce tu canal de youtube: https://www.youtube.com/@matematicastop.
+            Puedes ayudar con problemas matemáticos, explicar conceptos y mantener una conversación general sobre matemáticas y temas relacionados. No respondas a temas no relacionados con las Matemáticas.
             No uses LaTeX ni Markdown solo texto plano."""
         }
         
