@@ -16,9 +16,6 @@ class MathBot:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-
-
-        # Initialize OpenAI client
         self.openai_client = OpenAI()
 
         # Initialize database manager and math assistant
