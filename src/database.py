@@ -109,22 +109,7 @@ class DatabaseManager:
             ''', (user_id,))
             return cursor.fetchone()
 
-    def _insert_video_embedding(self, embedding):
-        with self.get_connection() as conn:
-            embedding_str = ', '.join(map(str, embedding))
-            conn.execute(f"""
-                INSERT INTO yt_videos_embeddings (embedding)
-                VALUES ('[{embedding_str}]')
-            """)
-            conn.commit()
-
-    def _insert_video_data(self, url, description):
-        with self.get_connection() as conn:
-            conn.execute("""
-                INSERT INTO yt_videos (url, description)
-                VALUES (?, ?)
-            """, (url, description))
-            conn.commit()
+    
 
     def insert_yt_data_csv(self, csv_file):
         df = pd.read_csv(csv_file, names=['url', 'description'])
@@ -154,6 +139,23 @@ class DatabaseManager:
             result = cursor.fetchone()
             return result if result else (None, None)
 
+
+    def _insert_video_embedding(self, embedding):
+        with self.get_connection() as conn:
+            embedding_str = ', '.join(map(str, embedding))
+            conn.execute(f"""
+                INSERT INTO yt_videos_embeddings (embedding)
+                VALUES ('[{embedding_str}]')
+            """)
+            conn.commit()
+
+    def _insert_video_data(self, url, description):
+        with self.get_connection() as conn:
+            conn.execute("""
+                INSERT INTO yt_videos (url, description)
+                VALUES (?, ?)
+            """, (url, description))
+            conn.commit()
 # Usage example:
 # db_manager = DatabaseManager(SQLITECLOUD_API_KEY, "matematicas-top")
 # db_manager.initialize_database()
