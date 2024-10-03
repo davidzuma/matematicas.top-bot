@@ -6,10 +6,7 @@ from config import Config
 from math_assistant import MathAssistant
 from database import DatabaseManager
 from openai import OpenAI
-import requests
-
-
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from threading import Thread
 import uvicorn
 
@@ -22,18 +19,12 @@ TELEGRAM_TOKEN = config.TELEGRAM_BOT_TOKEN
 
 @app.get("/healthz")
 async def health_check():
-    
-    telegram_url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/getMe"
-    
     try:
-        response = requests.get(telegram_url)
-        if response.status_code == 200:
-            return {"status": "Bot is running"}, 200
-        else:
-            return {"status": "Telegram API error"}, 500
-    except requests.RequestException as e:
-        return {"status": "Bot not running", "error": str(e)}, 500
-
+        # Perform basic health checks
+        await bot.get_me()  # Check bot authorization
+        return {"status": "healthy"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 def run_health_check_server():
     uvicorn.run(app, host="0.0.0.0", port=8080)
 
