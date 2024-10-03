@@ -13,9 +13,15 @@ import uvicorn
 
 app = FastAPI()
 
+bot_is_running = False
+
+
 @app.get("/healthz")
 async def health_check():
-    return {"status": "OK"}
+    if bot_is_running:
+        return {"status": "OK"}, 200
+    else:
+        return {"status": "Bot not running"}, 500 
 
 def run_health_check_server():
     uvicorn.run(app, host="0.0.0.0", port=8080)
@@ -48,11 +54,11 @@ class MathBot:
             # TODO: finish this funcionality
             referrer_id = context.args[0]
             self.db_manager.add_credits(referrer_id, 10)
-            await update.message.reply_text(f"Te has registrado con el código de referencia de {referrer_id}. ¡Ellos ganaron 10 créditos!")
+            await update.message.reply_text(f"Te has registrado con el código de referencia de {referrer_id}.")
 
         self.db_manager.create_user(user.id, user.username, user.first_name, user.last_name)
         self.logger.info(f"User {user.first_name} started the bot.")
-        await update.message.reply_text(f'Hola {user.first_name}! Puedes enviarme mensajes o imágenes de ecuaciones. ¿En qué puedo ayudarte hoy?')
+        await update.message.reply_text(f'Hola {user.first_name}! Puedes enviarme mensajes o imágenes de Matemáticas. ¿En qué puedo ayudarte hoy?')
 
         # Initialize conversation history
         context.user_data['history'] = []
@@ -70,8 +76,8 @@ class MathBot:
 
         context.user_data['history'].append({"role": "assistant", "content": response})
 
-        if len(context.user_data['history']) > 10:
-            context.user_data['history'] = context.user_data['history'][-10:]
+        if len(context.user_data['history']) > 5:
+            context.user_data['history'] = context.user_data['history'][-5:]
 
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
         await update.message.reply_text(response)
@@ -106,8 +112,8 @@ class MathBot:
         os.remove(image_path)
         self.logger.info(f"Temporary image {image_path} deleted.")
 
-        context.user_data['history'].append({"role": "user", "content": "User sent an image of a math problem."})
-        context.user_data['history'].append({"role": "assistant", "content": f"I solved the math problem: {solution}\n\nHere's a relevant video: {yt_video_link}"})
+        context.user_data['history'].append({"role": "user", "content": "El usuario envió una imagen de un problema matemático."})
+        context.user_data['history'].append({"role": "assistant", "content": f"He resuelto el problema matemático: {solution}\n\nAquí hay un video relevante: {yt_video_link}"})
 
     async def show_usage(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
@@ -121,7 +127,7 @@ class MathBot:
     async def referral(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         referral_link = f"https://t.me/{context.bot.username}?start={user.id}"
-        await update.message.reply_text(f'Tu enlace de referencia: {referral_link}')
+        await update.message.reply_text(f'🌟 Tu enlace de referencia: {referral_link}. Invita a amigos 👥 y recibirás un millón de tokens extra para usar conmigo! 🎉')
 
     def setup_handlers(self):
         self.application.add_handler(CommandHandler("start", self.start))
@@ -130,14 +136,24 @@ class MathBot:
         self.application.add_handler(MessageHandler(filters.PHOTO, self.handle_image))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
 
-    def run(self):
-        self.db_manager.initialize_database()
-        self.setup_handlers()
-        self.logger.info("Bot is polling for updates.")
-        # for health status
-        health_check_thread = Thread(target=run_health_check_server)
-        health_check_thread.start()       
-        self.application.run_polling()
+def run(self):
+        global bot_is_running
+        try:
+            self.db_manager.initialize_database()
+            self.setup_handlers()
+            self.logger.info("Bot is polling for updates.")
+            
+            # separate Thread for health status
+            health_check_thread = Thread(target=run_health_check_server)
+            health_check_thread.start()
+            
+            bot_is_running = True  
+            self.application.run_polling()
+        except Exception as e:
+            self.logger.error(f"Bot encountered an error: {e}")
+            bot_is_running = False  
+        finally:
+            bot_is_running = False
 
 if __name__ == "__main__":
     config = Config()
