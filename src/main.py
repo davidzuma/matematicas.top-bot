@@ -10,28 +10,19 @@ from fastapi import FastAPI, HTTPException
 from threading import Thread
 import uvicorn
 import requests
-app = FastAPI()
+import asyncio
+from contextlib import asynccontextmanager
+
+
+from telegram.error import TelegramError
+
+
 
 config = Config()
 config.set_config() # Asegúrate de que el token se inicialice correctamente
 
 TELEGRAM_TOKEN = config.TELEGRAM_BOT_TOKEN 
-@app.get("/healthz")
-async def health_check():
-    try:
-        # Hacemos una solicitud a getUpdates para verificar si el bot está recibiendo actualizaciones
-        response = await requests.post(f"https://api.telegram.org/bot{YOUR_BOT_TOKEN}/getUpdates")
-        data = response.json()
-        
-        # Verificamos que se obtengan actualizaciones válidas
-        if response.status_code == 200 and "result" in data:
-            return {"status": "Bot is active"}
-        else:
-            return {"status": "Bot is not receiving updates"}, 500
-    except Exception as e:
-        return {"error": str(e)}, 500
-def run_health_check_server():
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+
 
 
 class MathBot:
@@ -53,6 +44,7 @@ class MathBot:
         self.application = ApplicationBuilder().token(self.config.TELEGRAM_BOT_TOKEN).build()
         self.application.bot_data['db_manager'] = self.db_manager
         self.application.bot_data['math_assistant'] = self.math_assistant
+        self.running = False
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
@@ -164,21 +156,50 @@ class MathBot:
         self.application.add_handler(MessageHandler(filters.PHOTO, self.handle_image))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
 
-    def run(self):
+    async def run(self):
         try:
             self.db_manager.initialize_database()
             self.setup_handlers()
+            self.logger.info("Bot is initializing...")
+
+            self.running = True
+            await self.application.initialize()  # Explicitly initialize the bot
             self.logger.info("Bot is polling for updates.")
             
-            # separate thread for the health status
-            health_check_thread = Thread(target=run_health_check_server)
-            health_check_thread.start()
+            await self.application.start()
+            await self.application.updater.start_polling()
+            # Await the polling task directly
             
-            self.application.run_polling()
+
         except Exception as e:
             self.logger.error(f"Bot encountered an error: {e}")
+            self.running = False 
+
+
+config = Config()
+bot = MathBot(config)
+
+
+# Define your lifespan handler
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+
+    bot_task = asyncio.create_task(bot.run())
+    yield
+    bot_task.cancel()
+    await bot_task
+
+app = FastAPI(lifespan=lifespan)
+@app.get("/healthz")
+async def health_check():
+    if not bot.running:  # Check the running flag
+        raise HTTPException(status_code=503, detail="Bot is not running")
+    else:
+        return {"status": "healthy"}
+    
+
+
 
 if __name__ == "__main__":
-    config = Config()
-    bot = MathBot(config)
-    bot.run()
+    uvicorn.run(app, host="0.0.0.0", port=8080)
+  
