@@ -7,6 +7,20 @@ from math_assistant import MathAssistant
 from database import DatabaseManager
 from openai import OpenAI
 
+from fastapi import FastAPI
+from threading import Thread
+import uvicorn
+
+app = FastAPI()
+
+@app.get("/healthz")
+async def health_check():
+    return {"status": "OK"}
+
+def run_health_check_server():
+    uvicorn.run(app, host="0.0.0.0", port=8080)
+
+
 class MathBot:
     def __init__(self, config: Config):
         self.config = config
@@ -48,6 +62,8 @@ class MathBot:
         message = update.message.text
 
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
+
+        #TODO: This breaks at the begining but the app still functional
         context.user_data['history'].append({"role": "user", "content": message})
 
         response = self.math_assistant.chat(context.user_data['history'], user.id)
@@ -118,6 +134,9 @@ class MathBot:
         self.db_manager.initialize_database()
         self.setup_handlers()
         self.logger.info("Bot is polling for updates.")
+        # for health status
+        health_check_thread = Thread(target=run_health_check_server)
+        health_check_thread.start()       
         self.application.run_polling()
 
 if __name__ == "__main__":

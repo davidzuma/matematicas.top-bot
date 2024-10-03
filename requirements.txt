@@ -3,3 +3,5 @@ openai
 sqlitecloud
 pandas
 python-telegram-bot
+fastapi
+uvicorn
