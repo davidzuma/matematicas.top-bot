@@ -9,22 +9,27 @@ from openai import OpenAI
 from fastapi import FastAPI, HTTPException
 from threading import Thread
 import uvicorn
-
+import requests
 app = FastAPI()
 
 config = Config()
 config.set_config() # Asegúrate de que el token se inicialice correctamente
 
 TELEGRAM_TOKEN = config.TELEGRAM_BOT_TOKEN 
-
 @app.get("/healthz")
 async def health_check():
     try:
-        # Perform basic health checks
-        await bot.get_me()  # Check bot authorization
-        return {"status": "healthy"}
+        # Hacemos una solicitud a getUpdates para verificar si el bot está recibiendo actualizaciones
+        response = await requests.post(f"https://api.telegram.org/bot{YOUR_BOT_TOKEN}/getUpdates")
+        data = response.json()
+        
+        # Verificamos que se obtengan actualizaciones válidas
+        if response.status_code == 200 and "result" in data:
+            return {"status": "Bot is active"}
+        else:
+            return {"status": "Bot is not receiving updates"}, 500
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"error": str(e)}, 500
 def run_health_check_server():
     uvicorn.run(app, host="0.0.0.0", port=8080)
 
