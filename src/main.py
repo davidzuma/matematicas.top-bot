@@ -6,6 +6,8 @@ from config import Config
 from math_assistant import MathAssistant
 from database import DatabaseManager
 from openai import OpenAI
+import requests
+
 
 from fastapi import FastAPI
 from threading import Thread
@@ -13,15 +15,24 @@ import uvicorn
 
 app = FastAPI()
 
-bot_is_running = False
+config = Config()
+config.set_config() # Asegúrate de que el token se inicialice correctamente
 
+TELEGRAM_TOKEN = config.TELEGRAM_BOT_TOKEN 
 
 @app.get("/healthz")
 async def health_check():
-    if bot_is_running:
-        return {"status": "OK"}, 200
-    else:
-        return {"status": "Bot not running"}, 500 
+    
+    telegram_url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/getMe"
+    
+    try:
+        response = requests.get(telegram_url)
+        if response.status_code == 200:
+            return {"status": "Bot is running"}, 200
+        else:
+            return {"status": "Telegram API error"}, 500
+    except requests.RequestException as e:
+        return {"status": "Bot not running", "error": str(e)}, 500
 
 def run_health_check_server():
     uvicorn.run(app, host="0.0.0.0", port=8080)
@@ -64,10 +75,8 @@ class MathBot:
                 await update.message.reply_text(f"Te has registrado con un código de referencia. ¡Tu amigo ha ganado 1,000,000 de tokens extra!")
 
         self.logger.info(f"User {user.first_name} started the bot.")
-        await update.message.reply_text(f"""¡Hola, {user.first_name}! 👋 Soy Matemáticas TOP, aquí para ayudarte con todo lo de matemáticas. 📚✨
-                                        ¿Tienes dudas o problemas por resolver? Mándame tus preguntas o una foto del problema, ¡y te lo resuelvo! 🧠📸
-                                        Y no olvides pasarte por mi canal de YouTube 🎥👉 https://www.youtube.com/@matematicastop para más trucos y ayuda.
-                                        ¿Qué necesitas hoy? 😊""")
+        await update.message.reply_text(f"""
+        ¡Hola, {user.first_name}! 👋 Soy Matemáticas TOP, aquí para ayudarte con todo lo de matemáticas. 📚✨ ¿Tienes dudas o problemas por resolver? Mándame tus preguntas o una foto del problema, ¡y te lo resuelvo! 📸 Y no olvides pasarte por mi canal de YouTube 🎥👉 https://www.youtube.com/@matematicastop para más trucos y ayuda. ¿Qué necesitas hoy? 😊""")
 
         context.user_data['history'] = []
 
@@ -82,6 +91,8 @@ class MathBot:
                 await update.message.reply_text("Lo siento, has agotado tus tokens. Invita a un amigo para obtener más tokens.")
                 return
         
+        if 'history' not in context.user_data:
+            await self.start(update, context)
         message = update.message.text
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
         context.user_data['history'].append({"role": "user", "content": message})
@@ -89,8 +100,8 @@ class MathBot:
         response = self.math_assistant.chat(context.user_data['history'], user.id)
         context.user_data['history'].append({"role": "assistant", "content": response})
 
-        if len(context.user_data['history']) > 10:
-            context.user_data['history'] = context.user_data['history'][-10:]
+        if len(context.user_data['history']) > 5:
+            context.user_data['history'] = context.user_data['history'][-5:]
 
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
         await update.message.reply_text(response)
@@ -157,24 +168,19 @@ class MathBot:
         self.application.add_handler(MessageHandler(filters.PHOTO, self.handle_image))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
 
-def run(self):
-        global bot_is_running
+    def run(self):
         try:
             self.db_manager.initialize_database()
             self.setup_handlers()
             self.logger.info("Bot is polling for updates.")
             
-            # separate Thread for health status
+            # separate thread for the health status
             health_check_thread = Thread(target=run_health_check_server)
             health_check_thread.start()
             
-            bot_is_running = True  
             self.application.run_polling()
         except Exception as e:
             self.logger.error(f"Bot encountered an error: {e}")
-            bot_is_running = False  
-        finally:
-            bot_is_running = False
 
 if __name__ == "__main__":
     config = Config()

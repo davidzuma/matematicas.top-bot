@@ -36,6 +36,11 @@ class DatabaseManager:
         self._create_yt_videos_table()
         self._create_yt_videos_embeddings_table()
 
+    def is_user_registered(self, user_id):
+        with self.get_connection() as conn:
+            cursor = conn.execute('SELECT 1 FROM users WHERE user_id = ?', (user_id,))
+            return cursor.fetchone() is not None
+
     def _create_users_table(self):
         with self.get_connection() as conn:
             conn.execute('''
@@ -156,6 +161,12 @@ class DatabaseManager:
                 VALUES (?, ?)
             """, (url, description))
             conn.commit()
+
+if __name__ == "__main__":
+    db_manager = DatabaseManager(os.getenv("SQLITECLOUD_API_KEY"), os.getenv("DB_NAME", "matematicas-top"))
+    db_manager.initialize_database()
+     # Assuming clear_database is a method to clear the database
+
 # Usage example:
 # db_manager = DatabaseManager(SQLITECLOUD_API_KEY, "matematicas-top")
 # db_manager.initialize_database()
