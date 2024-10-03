@@ -52,14 +52,14 @@ class MathBot:
         if not self.db_manager.is_user_registered(user.id):
             self.db_manager.create_user(user.id, user.username, user.first_name, user.last_name)
             # Log initial tokens as negative usage
-            self.db_manager.log_openai_usage(user.id, "INITIAL_TOKENS", -1000000, 0)
+            self.db_manager.log_openai_usage(user.id, "INITIAL_TOKENS", -20000, 0)
             await update.message.reply_text(f"¡Bienvenido, {user.first_name}! Tienes 1,000,000 de tokens para empezar.")
 
         if context.args:
             referrer_id = int(context.args[0])
             if referrer_id != user.id and self.db_manager.is_user_registered(referrer_id):
                 # Log referral bonus as negative usage
-                self.db_manager.log_openai_usage(referrer_id, "REFERRAL_BONUS", -1000000, 0)
+                self.db_manager.log_openai_usage(referrer_id, "REFERRAL_BONUS", -10000, 0)
                 await update.message.reply_text(f"Te has registrado con un código de referencia. ¡Tu amigo ha ganado 1,000,000 de tokens extra!")
 
         self.logger.info(f"User {user.first_name} started the bot.")
@@ -192,6 +192,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 @app.get("/healthz")
 async def health_check():
+    await asyncio.sleep(300)
     if not bot.running:  # Check the running flag
         raise HTTPException(status_code=503, detail="Bot is not running")
     else:
