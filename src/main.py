@@ -1,5 +1,5 @@
 import logging
-from telegram import Update
+from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 from config import Config
@@ -20,6 +20,7 @@ WEBHOOK_URL = config.WEBHOOK_URL  # Add this to your Config class
 
 class MathBot:
     def __init__(self, config: Config):
+   def __init__(self, config: Config):
         self.config = config
         self.logger = logging.getLogger(__name__)
         self.openai_client = OpenAI()
@@ -27,6 +28,7 @@ class MathBot:
         self.math_assistant = MathAssistant(self.db_manager, self.openai_client)
         self.application = ApplicationBuilder().token(self.config.TELEGRAM_BOT_TOKEN).build()
         self.running = False
+        self.bot = Bot(token=self.config.TELEGRAM_BOT_TOKEN)
 
     async def setup(self):
         self.db_manager.initialize_database()
@@ -135,12 +137,12 @@ class MathBot:
             available_tokens = max(0, -usage[0])
             await update.message.reply_text(f"Tienes {available_tokens} tokens 💰 disponibles para usar.")
         else:
-            await update.message.reply_text("Tienes 1,000,000 de tokens disponibles para usar.")
+            await update.message.reply_text("Tienes 20,000 de tokens disponibles para usar.")
 
     async def referral(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         referral_link = f"https://t.me/{context.bot.username}?start={user.id}"
-        await update.message.reply_text(f'🌟 Tu enlace de referencia: {referral_link}. Invita a amigos 👥 y recibirás 1,000,000 de tokens extra para usar conmigo! 🎉')
+        await update.message.reply_text(f'🌟 Tu enlace de referencia: {referral_link}. Invita a amigos 👥 y recibirás 10,000 de tokens extra para usar aquí 💰! ')
     async def keep_alive(self):
         while True:
             try:
