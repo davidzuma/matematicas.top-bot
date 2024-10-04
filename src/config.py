@@ -10,6 +10,7 @@ class Config:
         self.DB_NAME = os.getenv("DB_NAME", "matematicas-top")
         self.WEBHOOK_URL = "https://matematicas-top-bot.onrender.com"
         self.WEBHOOK_PATH = f"/webhook/{self.TELEGRAM_BOT_TOKEN}"
+        self.ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 
     def set_config(self):         
         os.environ["OPENAI_API_KEY"] = self.OPENAI_API_KEY

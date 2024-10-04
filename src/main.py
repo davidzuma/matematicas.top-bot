@@ -6,7 +6,7 @@ from config import Config
 from math_assistant import MathAssistant
 from database import DatabaseManager
 from openai import OpenAI
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from contextlib import asynccontextmanager
 import uvicorn
 import asyncio
@@ -141,7 +141,18 @@ class MathBot:
         user = update.effective_user
         referral_link = f"https://t.me/{context.bot.username}?start={user.id}"
         await update.message.reply_text(f'🌟 Tu enlace de referencia: {referral_link}. Invita a amigos 👥 y recibirás 1,000,000 de tokens extra para usar conmigo! 🎉')
-
+    async def keep_alive(self):
+        while True:
+            try:
+                if self.config.ADMIN_CHAT_ID:
+                    await self.bot.send_message(chat_id=self.config.ADMIN_CHAT_ID, text="/start")
+                    self.logger.info("Sent keep-alive message")
+                else:
+                    self.logger.warning("ADMIN_CHAT_ID not set, skipping keep-alive message")
+                await asyncio.sleep(300)  # Wait for 5 minutes
+            except Exception as e:
+                self.logger.error(f"Error in keep_alive: {e}")
+                await asyncio.sleep(60)
 config = Config()
 bot = MathBot(config)
 
@@ -149,8 +160,9 @@ bot = MathBot(config)
 async def lifespan(app: FastAPI):
     config.set_config()
     await bot.setup()
-    yield
-    # Cleanup code here if needed
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(bot.keep_alive)
+    yield {"background_tasks": background_tasks}
 
 app = FastAPI(lifespan=lifespan)
 
