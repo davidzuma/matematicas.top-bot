@@ -6,59 +6,53 @@ from config import Config
 from math_assistant import MathAssistant
 from database import DatabaseManager
 from openai import OpenAI
-from fastapi import FastAPI, HTTPException
-from threading import Thread
-import uvicorn
-import requests
-import asyncio
+from fastapi import FastAPI, Request, HTTPException
 from contextlib import asynccontextmanager
-
-
-from telegram.error import TelegramError
-
-
+import uvicorn
+import asyncio
+from time import time
 
 config = Config()
-config.set_config() # Asegúrate de que el token se inicialice correctamente
+config.set_config()
 
-TELEGRAM_TOKEN = config.TELEGRAM_BOT_TOKEN 
-
-
+TELEGRAM_TOKEN = config.TELEGRAM_BOT_TOKEN
+WEBHOOK_URL = config.WEBHOOK_URL  # Add this to your Config class
 
 class MathBot:
     def __init__(self, config: Config):
         self.config = config
-        self.config.set_config()
-
-        # Configure logging
-        logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
-
         self.openai_client = OpenAI()
-
-        # Initialize database manager and math assistant
         self.db_manager = DatabaseManager(self.config.SQLITECLOUD_API_KEY, self.config.DB_NAME)
         self.math_assistant = MathAssistant(self.db_manager, self.openai_client)
-
-        # Initialize the application
         self.application = ApplicationBuilder().token(self.config.TELEGRAM_BOT_TOKEN).build()
-        self.application.bot_data['db_manager'] = self.db_manager
-        self.application.bot_data['math_assistant'] = self.math_assistant
         self.running = False
+
+    async def setup(self):
+        self.db_manager.initialize_database()
+        self.setup_handlers()
+        await self.application.initialize()
+        await self.application.bot.set_webhook(url=self.config.get_webhook_url())
+        self.logger.info(f"Webhook set to {self.config.get_webhook_url()}")
+        self.running = True
+
+    def setup_handlers(self):
+        self.application.add_handler(CommandHandler("start", self.start))
+        self.application.add_handler(CommandHandler("usage", self.show_usage))
+        self.application.add_handler(CommandHandler("referral", self.referral))
+        self.application.add_handler(MessageHandler(filters.PHOTO, self.handle_image))
+        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
-
         if not self.db_manager.is_user_registered(user.id):
             self.db_manager.create_user(user.id, user.username, user.first_name, user.last_name)
-            # Log initial tokens as negative usage
             self.db_manager.log_openai_usage(user.id, "INITIAL_TOKENS", -20000, 0)
             await update.message.reply_text(f"¡Bienvenido, {user.first_name}! Tienes 1,000,000 de tokens para empezar.")
 
         if context.args:
             referrer_id = int(context.args[0])
             if referrer_id != user.id and self.db_manager.is_user_registered(referrer_id):
-                # Log referral bonus as negative usage
                 self.db_manager.log_openai_usage(referrer_id, "REFERRAL_BONUS", -10000, 0)
                 await update.message.reply_text(f"Te has registrado con un código de referencia. ¡Tu amigo ha ganado 1,000,000 de tokens extra!")
 
@@ -70,11 +64,9 @@ class MathBot:
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
-        
-        # Check if user has enough tokens. TODO dis could be a function to reuse
         usage = self.db_manager.get_user_usage(user.id)
         if usage:
-            available_tokens = max(0, -usage[0])  # usage[0] is negative for available tokens
+            available_tokens = max(0, -usage[0])
             if available_tokens <= 0:
                 await update.message.reply_text("Lo siento, has agotado tus tokens. Invita a un amigo para obtener más tokens.")
                 return
@@ -135,11 +127,12 @@ class MathBot:
             context.user_data['history'].append({"role": "user", "content": "El usuario envió una imagen de un problema matemático."})
             context.user_data['history'].append({"role": "assistant", "content": f"He resuelto el problema matemático: {solution}\n\nAquí hay un video relevante: {yt_video_link}"})
 
+
     async def show_usage(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         usage = self.db_manager.get_user_usage(user.id)
         if usage:
-            available_tokens = max(0, -usage[0])  # usage[0] is negative for available tokens
+            available_tokens = max(0, -usage[0])
             await update.message.reply_text(f"Tienes {available_tokens} tokens 💰 disponibles para usar.")
         else:
             await update.message.reply_text("Tienes 1,000,000 de tokens disponibles para usar.")
@@ -149,58 +142,30 @@ class MathBot:
         referral_link = f"https://t.me/{context.bot.username}?start={user.id}"
         await update.message.reply_text(f'🌟 Tu enlace de referencia: {referral_link}. Invita a amigos 👥 y recibirás 1,000,000 de tokens extra para usar conmigo! 🎉')
 
-    def setup_handlers(self):
-        self.application.add_handler(CommandHandler("start", self.start))
-        self.application.add_handler(CommandHandler("usage", self.show_usage))
-        self.application.add_handler(CommandHandler("referral", self.referral))
-        self.application.add_handler(MessageHandler(filters.PHOTO, self.handle_image))
-        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
-
-    async def run(self):
-        try:
-            self.db_manager.initialize_database()
-            self.setup_handlers()
-            self.logger.info("Bot is initializing...")
-
-            self.running = True
-            await self.application.initialize()  # Explicitly initialize the bot
-            self.logger.info("Bot is polling for updates.")
-            
-            await self.application.start()
-            await self.application.updater.start_polling()
-            # Await the polling task directly
-            
-
-        except Exception as e:
-            self.logger.error(f"Bot encountered an error: {e}")
-            self.running = False 
-
-
 config = Config()
 bot = MathBot(config)
 
-
-# Define your lifespan handler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
-    bot_task = asyncio.create_task(bot.run())
+    config.set_config()
+    await bot.setup()
     yield
-    bot_task.cancel()
-    await bot_task
+    # Cleanup code here if needed
 
 app = FastAPI(lifespan=lifespan)
+
+@app.post(config.WEBHOOK_PATH)
+async def webhook_handler(request: Request):
+    data = await request.json()
+    update = Update.de_json(data, bot.application.bot)
+    await bot.application.process_update(update)
+    return {"ok": True}
+
 @app.get("/healthz")
 async def health_check():
-    await asyncio.sleep(300)
-    if not bot.running:  # Check the running flag
+    if not bot.running:
         raise HTTPException(status_code=503, detail="Bot is not running")
-    else:
-        return {"status": "healthy"}
-    
-
-
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080)
-  
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
