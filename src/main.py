@@ -20,7 +20,6 @@ WEBHOOK_URL = config.WEBHOOK_URL  # Add this to your Config class
 
 class MathBot:
     def __init__(self, config: Config):
-   def __init__(self, config: Config):
         self.config = config
         self.logger = logging.getLogger(__name__)
         self.openai_client = OpenAI()
