@@ -5,97 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Matematicas.top Bot Demo</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #729bc9;
-            --text-color: #333;
-            --background-color: #f5f5f5;
-            --accent-color: #e74c3c;
-        }
+<link rel="stylesheet" href="style.css">
 
-        body {
-            font-family: 'Roboto', sans-serif;
-            line-height: 1.6;
-            color: var(--text-color);
-            background-color: var(--background-color);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 2rem 0;
-            text-align: center;
-        }
-
-        h1 {
-            margin-bottom: 0.5rem;
-            font-size: 2.5rem;
-        }
-
-        .demo-container {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .demo-gif {
-            max-width: 100%;
-            height: auto;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        section {
-            padding: 2rem 0;
-        }
-
-        h2 {
-            color: var(--primary-color);
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-
-        ul, ol {
-            background-color: white;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .warning {
-            background-color: var(--accent-color);
-            color: white;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 20px;
-        }
-
-        footer {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 1rem 0;
-            text-align: center;
-            margin-top: auto;
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
-            }
-        }
-    </style>
 </head>
 <body>
     <header>
@@ -109,7 +20,7 @@
             <p><strong>matematicas.top-bot</strong> helps you solve mathematical problems and answer questions. You can send it equations or images with mathematical problems, and the bot will solve them using artificial intelligence.</p>
         
             <div class="demo-container">
-                <img src="assets/demo.gif" alt="Matematicas.top Bot Demo" class="demo-gif">
+                <img src="assets/demo.gif" alt="Matematicas.top Bot Demo" class="demo-gif" style="max-width: 25%; height: auto;">
             </div>
         </section>
         
@@ -120,7 +31,7 @@
                 <li>Processes written equations and equations in images</li>
                 <li>Uses advanced artificial intelligence</li>
                 <li>Implements RAG (Retrieval-Augmented Generation) with SQLite Cloud and vectors</li>
-                <li>Uses vision capabilities of OpenAI's GPT-4 model</li>
+                <li>Uses vision capabilities of OpenAI's GPT-4o model</li>
             </ul>
         </section>
         
@@ -135,7 +46,7 @@
             <p>The bot uses a combination of advanced technologies to process and respond to your mathematical queries:</p>
             <ol>
                 <li>RAG (Retrieval-Augmented Generation) with SQLite Cloud and vectors to improve the accuracy of responses.</li>
-                <li>Artificial vision capabilities of OpenAI's GPT-4 model to interpret images of mathematical problems.</li>
+                <li>Artificial vision capabilities of OpenAI's GPT-4o model to interpret images of mathematical problems.</li>
                 <li>Natural language processing to understand and solve written equations and problems.</li>
             </ol>
             
