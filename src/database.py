@@ -4,11 +4,11 @@ import os
 import sqlitecloud
 from dotenv import load_dotenv
 from openai import OpenAI
-from utils import get_embedding
 import pandas as pd
-
-
- # TODO: add config here
+import subprocess
+from config import Config
+from ai_assistant import OpenAIUtils
+# TODO: add config here
 # Load environment variables from .env file
 load_dotenv()
 SQLITECLOUD_API_KEY = os.getenv("SQLITECLOUD_API_KEY")
@@ -17,9 +17,10 @@ os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 client = OpenAI()
 
 class DatabaseManager:
-    def __init__(self, api_key, db_name):
-        self.api_key = api_key
-        self.db_name = db_name
+    def __init__(self, config, ai_assistant):
+        self.api_key = config.SQLITECLOUD_API_KEY
+        self.db_name = config.DB_NAME
+        self.ai_assistant = ai_assistant
 
     @contextlib.contextmanager
     def get_connection(self):
@@ -114,13 +115,11 @@ class DatabaseManager:
             ''', (user_id,))
             return cursor.fetchone()
 
-    
-
     def insert_yt_data_csv(self, csv_file):
         df = pd.read_csv(csv_file, names=['url', 'description'])
         for _, row in df.iterrows():
             self._insert_video_data(row['url'], row['description'])
-            embedding = get_embedding(row['description'])
+            embedding = self.ai_assistant.get_embedding(row['description'])
             self._insert_video_embedding(embedding)
 
     def retrieve_similar_vectors(self, sample_embedding, limit=4):
@@ -144,7 +143,6 @@ class DatabaseManager:
             result = cursor.fetchone()
             return result if result else (None, None)
 
-
     def _insert_video_embedding(self, embedding):
         with self.get_connection() as conn:
             embedding_str = ', '.join(map(str, embedding))
@@ -162,10 +160,24 @@ class DatabaseManager:
             """, (url, description))
             conn.commit()
 
+    def get_videos(self):  # TODO get and do upsert without saving into disc
+        command = [
+            "yt-dlp",
+            "--flat-playlist",
+            "--print", "%(url)s,%(title)s",
+            "--ignore-errors",
+            "--no-warnings",
+            "https://www.youtube.com/@matematicastop/videos"
+        ]
+        with open("videos.csv", "w") as output_file:
+            subprocess.run(command, stdout=output_file)
+
 if __name__ == "__main__":
-    db_manager = DatabaseManager(os.getenv("SQLITECLOUD_API_KEY"), os.getenv("DB_NAME", "matematicas-top"))
+    config = Config()
+    ai_assistant = 
+    db_manager = DatabaseManager(config=config)
     db_manager.initialize_database()
-     # Assuming clear_database is a method to clear the database
+    # Assuming clear_database is a method to clear the database
 
 # Usage example:
 # db_manager = DatabaseManager(SQLITECLOUD_API_KEY, "matematicas-top")

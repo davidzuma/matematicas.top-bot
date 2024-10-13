@@ -131,7 +131,9 @@ class MathAssistant:
                                   Problema de mátematicas: {math_problem}.
                                   
                                   Lista de videos y links: {descriptions_and_links}.
-                                  Devuelve el link del video. No incluyas nada más."""
+                                  Si los videos no están relacionados, responde: "No encontré ningún video relacionado".
+                                  Devuelve el link del video o No encontré ningún video relacionado.
+                                   No incluyas nada más. """
                     }
                 ]
             }
