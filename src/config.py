@@ -5,7 +5,8 @@ class Config:
     def __init__(self):
         load_dotenv()
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        self.TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_API_KEY")
+        self.TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_API_KEY_PROD")
+        self.TELEGRAM_BOT_TOKEN_DEV = os.getenv("TELEGRAM_BOT_API_KEY_DEV")
         self.SQLITECLOUD_API_KEY = os.getenv("SQLITECLOUD_API_KEY")
         self.DB_NAME = os.getenv("DB_NAME", "matematicas-top")
         self.WEBHOOK_URL = "https://matematicas-top-bot.onrender.com"

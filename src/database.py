@@ -3,24 +3,20 @@ from datetime import datetime
 import os
 import sqlitecloud
 from dotenv import load_dotenv
-from openai import OpenAI
+
 import pandas as pd
 import subprocess
 from config import Config
-from ai_assistant import OpenAIUtils
-# TODO: add config here
-# Load environment variables from .env file
 load_dotenv()
 SQLITECLOUD_API_KEY = os.getenv("SQLITECLOUD_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-client = OpenAI()
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
 
 class DatabaseManager:
-    def __init__(self, config, ai_assistant):
+    def __init__(self, config):
         self.api_key = config.SQLITECLOUD_API_KEY
         self.db_name = config.DB_NAME
-        self.ai_assistant = ai_assistant
 
     @contextlib.contextmanager
     def get_connection(self):
@@ -115,12 +111,12 @@ class DatabaseManager:
             ''', (user_id,))
             return cursor.fetchone()
 
-    def insert_yt_data_csv(self, csv_file):
-        df = pd.read_csv(csv_file, names=['url', 'description'])
-        for _, row in df.iterrows():
-            self._insert_video_data(row['url'], row['description'])
-            embedding = self.ai_assistant.get_embedding(row['description'])
-            self._insert_video_embedding(embedding)
+    # def insert_yt_data_csv(self, csv_file):
+    #     df = pd.read_csv(csv_file, names=['url', 'description'])
+    #     for _, row in df.iterrows():
+    #         self._insert_video_data(row['url'], row['description'])
+    #         embedding = self.get_embedding(row['description'])
+    #         self._insert_video_embedding(embedding)
 
     def retrieve_similar_vectors(self, sample_embedding, limit=4):
         with self.get_connection() as conn:
@@ -171,11 +167,10 @@ class DatabaseManager:
         ]
         with open("videos.csv", "w") as output_file:
             subprocess.run(command, stdout=output_file)
-
 if __name__ == "__main__":
     config = Config()
-    ai_assistant = 
-    db_manager = DatabaseManager(config=config)
+    
+    db_manager = DatabaseManager(config=config)  
     db_manager.initialize_database()
     # Assuming clear_database is a method to clear the database
 
